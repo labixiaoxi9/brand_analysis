@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>中国品牌研究智能体</title>
+  <style>
+    :root {
+      --bg: #eef2ff;
+      --card: #ffffff;
+      --header: #1f4db8;
+      --header2: #2f66d8;
+      --text: #182236;
+      --muted: #6b7280;
+      --border: #dbe3f3;
+      --user: #eaf1ff;
+      --assistant: #ffffff;
+      --primary: #1f4db8;
+      --primary-hover: #163d95;
+      --danger: #d92d20;
+      --ok: #027a48;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #f3f6ff 0%, #ebf0ff 100%);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+
+    .app {
+      width: min(1080px, 100%);
+      height: min(90vh, 860px);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 20px 48px rgba(31, 77, 184, 0.12);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: linear-gradient(120deg, var(--header), var(--header2));
+      color: #fff;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+    }
+
+    .avatar-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      overflow: hidden;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .avatar-btn img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .title-wrap {
+      min-width: 0;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin: 2px 0 0;
+      font-size: 13px;
+      opacity: 0.9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .messages {
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+      background: #f8faff;
+    }
+
+    .msg {
+      display: flex;
+      margin-bottom: 12px;
+    }
+
+    .msg.user { justify-content: flex-end; }
+    .msg.assistant { justify-content: flex-start; }
+
+    .bubble {
+      max-width: min(78%, 820px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      line-height: 1.8;
+      white-space: normal;
+      word-break: break-word;
+      font-size: 16px;
+      box-shadow: 0 3px 12px rgba(18, 35, 80, 0.05);
+      overflow-x: auto;
+    }
+
+    .bubble p { margin: 0 0 12px; }
+    .bubble p:last-child { margin-bottom: 0; }
+    .bubble h1, .bubble h2, .bubble h3, .bubble h4 { margin: 14px 0 10px; line-height: 1.45; }
+    .bubble h1 { font-size: 22px; }
+    .bubble h2 { font-size: 19px; }
+    .bubble h3 { font-size: 17px; }
+    .bubble h4 { font-size: 15px; }
+
+    .bubble strong { font-weight: 600; font-size: 0.98em; }
+    .bubble ul, .bubble ol { margin: 8px 0 8px 20px; padding: 0; }
+    .bubble li { margin: 4px 0; }
+    .bubble code {
+      background: #f1f5ff;
+      border: 1px solid #dfe7ff;
+      border-radius: 6px;
+      padding: 1px 5px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+    }
+    .bubble pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 10px;
+      overflow-x: auto;
+    }
+    .bubble pre code {
+      background: transparent;
+      border: 0;
+      color: inherit;
+      padding: 0;
+    }
+    .bubble table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0;
+      font-size: 13px;
+    }
+    .bubble th, .bubble td {
+      border: 1px solid #dbe3f3;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .bubble th {
+      background: #f4f7ff;
+      font-weight: 600;
+    }
+
+    .msg.user .bubble {
+      background: var(--user);
+      border-top-right-radius: 4px;
+    }
+
+    .msg.assistant .bubble {
+      background: var(--assistant);
+      border-top-left-radius: 4px;
+    }
+
+    .compose {
+      border-top: 1px solid var(--border);
+      padding: 12px;
+      background: #fff;
+    }
+
+    .status {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--danger); }
+
+    .compose-row {
+      display: grid;
+      grid-template-columns: 1fr 92px;
+      gap: 10px;
+      align-items: end;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 54px;
+      max-height: 160px;
+      resize: vertical;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.6;
+      outline: none;
+      font-family: inherit;
+      color: var(--text);
+      background: #fff;
+    }
+
+    textarea:focus {
+      border-color: #9eb6f5;
+      box-shadow: 0 0 0 3px rgba(47, 102, 216, 0.12);
+    }
+
+    button[type="submit"] {
+      height: 48px;
+      border: none;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button[type="submit"]:hover { background: var(--primary-hover); }
+    button[type="submit"][disabled] { opacity: 0.6; cursor: not-allowed; }
+
+    .tips {
+      margin: 8px 0 0;
+      color: #7f8597;
+      font-size: 12px;
+    }
+
+    @media (max-width: 700px) {
+      .title { font-size: 18px; }
+      .subtitle { font-size: 12px; }
+      .bubble { max-width: 92%; }
+      .compose-row { grid-template-columns: 1fr; }
+      button[type="submit"] { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <button id="avatarBtn" class="avatar-btn" type="button" title="点击切换头像">
+        <img id="avatarImg" alt="智能体头像" src="https://api.dicebear.com/7.x/shapes/svg?seed=brand-research-1" />
+      </button>
+      <div class="title-wrap">
+        <h1 class="title">中国品牌研究智能体</h1>
+        <p class="subtitle">聚焦行业洞察 / 品牌策略 / 增长路径</p>
+      </div>
+    </header>
+
+    <section class="chat-panel">
+      <div id="messages" class="messages">
+        <div class="msg assistant">
+          <div class="bubble">你好，我是中国品牌研究智能体。你可以告诉我目标行业、品牌阶段和预算情况，我会给你可执行的品牌分析与策略建议。</div>
+        </div>
+      </div>
+
+      <form id="chatForm" class="compose">
+        <div id="status" class="status">等待输入...</div>
+        <div class="compose-row">
+          <textarea id="text" name="text" placeholder="你想分析什么行业的品牌，想知道如何打造自己的品牌吗？" required></textarea>
+          <button id="submitBtn" type="submit">发送</button>
+        </div>
+        <p class="tips">提示：按 Enter 发送，Shift + Enter 换行。</p>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    const form = document.getElementById('chatForm');
+    const textEl = document.getElementById('text');
+    const submitBtn = document.getElementById('submitBtn');
+    const statusEl = document.getElementById('status');
+    const messagesEl = document.getElementById('messages');
+    const avatarBtn = document.getElementById('avatarBtn');
+    const avatarImg = document.getElementById('avatarImg');
+
+    const avatarList = [
+      'https://api.dicebear.com/7.x/shapes/svg?seed=brand-research-1',
+      'https://api.dicebear.com/7.x/shapes/svg?seed=brand-research-2',
+      'https://api.dicebear.com/7.x/shapes/svg?seed=brand-research-3',
+      'https://api.dicebear.com/7.x/shapes/svg?seed=brand-research-4'
+    ];
+    let avatarIndex = 0;
+
+    function normalizeMarkdownInput(content) {
+      if (!content) return '';
+
+      let text = content;
+
+      // 修复中文/数字被错误空格打散：例“宝 宝 护 肤”->“宝宝护肤”
+      text = text.replace(/([\u4e00-\u9fff0-9])\s+(?=[\u4e00-\u9fff0-9])/g, '$1');
+
+      // 把行内粘连标题拆分成独立段落
+      text = text.replace(/([^\n])\s+(#{1,3}\s*)/g, '$1\n\n$2');
+
+      // 标题修正：只处理 1~3 级，并补空格
+      text = text
+        .replace(/(^|\n)(#{1,3})(?=\S)/g, '$1$2 ')
+        .replace(/\n\s*(#{1,3})\s*/g, '\n\n$1 ');
+
+      // 视觉上不显示 #：将 Markdown 标题转为加粗独立段落
+      text = text.replace(/^#{1,3}\s+(.+)$/gm, '\n**$1**\n');
+
+      // 无序列表改为有序列表（避免黑点）
+      text = text.replace(/^\s*[-*]\s+/gm, '1. ');
+
+      // 常见“1 . 标题”=>“1. 标题”
+      text = text.replace(/(\d+)\s*\.\s+/g, '$1. ');
+
+      // 表格行拼接修正
+      text = text.replace(/\|\|/g, '|\n|');
+
+      // 清理多余空行
+      text = text.replace(/\n{3,}/g, '\n\n').replace(/^\n+/, '').trim();
+
+      return text;
+    }
+
+    function addMessage(role, content) {
+      const wrap = document.createElement('div');
+      wrap.className = `msg ${role}`;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+
+      if (role === 'assistant') {
+        const mdText = normalizeMarkdownInput(content);
+        bubble.innerHTML = marked.parse(mdText);
+      } else {
+        bubble.textContent = content;
+      }
+
+      wrap.appendChild(bubble);
+      messagesEl.appendChild(wrap);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return bubble;
+    }
+
+    avatarBtn.addEventListener('click', () => {
+      avatarIndex = (avatarIndex + 1) % avatarList.length;
+      avatarImg.src = avatarList[avatarIndex];
+    });
+
+    textEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = textEl.value.trim();
+      if (!text) return;
+
+      addMessage('user', text);
+      textEl.value = '';
+      submitBtn.disabled = true;
+      statusEl.textContent = '分析中...';
+      statusEl.className = 'status';
+
+      const assistantBubble = addMessage('assistant', '');
+
+      const formData = new FormData();
+      formData.append('text', text);
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || '请求失败');
+        }
+
+        statusEl.textContent = '分析完成';
+        statusEl.className = 'status ok';
+
+        const answer = (data.answer || '').trim();
+        if (!answer) {
+          assistantBubble.textContent = '暂未解析到回答，请稍后重试。';
+        } else {
+          const mdText = normalizeMarkdownInput(answer);
+          assistantBubble.innerHTML = marked.parse(mdText);
+        }
+
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      } catch (err) {
+        statusEl.textContent = '请求失败';
+        statusEl.className = 'status error';
+        assistantBubble.textContent = `请求失败：${err.message || String(err)}`;
+      } finally {
+        submitBtn.disabled = false;
+        textEl.focus();
+      }
+    });
+  </script>
+</body>
+</html>
