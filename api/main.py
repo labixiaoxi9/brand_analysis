@@ -16,19 +16,33 @@ load_dotenv(BASE_DIR / ".env")
 app = FastAPI(title="Coze Agent Proxy")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-COZE_STREAM_URL = os.getenv("COZE_STREAM_RUN_URL", "https://kcbnb7vzxq.coze.site/stream_run")
+COZE_STREAM_URL = "https://kcbnb7vzxq.coze.site/stream_run"
 COZE_SESSION_ID = os.getenv("COZE_SESSION_ID", "")
 COZE_PROJECT_ID = os.getenv("COZE_PROJECT_ID", "")
 COZE_API_TOKEN = os.getenv("COZE_API_TOKEN", "")
 
+OUTPUT_RULES = """请严格按照以下排版规范生成所有内容：
+1. 全文使用 Markdown 标准语法，不使用特殊符号、花里胡哨表情、多余空行。
+2. 标题层级清晰，只使用 1~3 级标题，不使用四级及以下。
+3. 正文段落段首不缩进，段落之间空一行。
+4. 列表统一使用无序列表 - 或有序列表 1.，层级嵌套不超过 2 层。
+5. 重点内容用粗体强调，不滥用斜体、颜色、下划线。
+6. 代码、命令、文件名使用行内代码，代码块使用 ``` 并标注语言。
+7. 结构复杂内容使用表格展示，保证对齐清晰。
+8. 全文逻辑遵循：总述 → 分点 → 示例 → 总结。
+9. 一级标题 # 全文最多 1 个；二级标题 ## 用于模块；三级标题 ### 用于子要点。
+10. 输出应结构清晰、层级分明、重点突出，避免大段无分割纯文字。"""
+
+
 def _build_payload(user_text: str) -> Dict:
+    merged_text = f"{OUTPUT_RULES}\n\n用户问题：\n{user_text.strip()}"
     return {
         "content": {
             "query": {
                 "prompt": [
                     {
                         "type": "text",
-                        "content": {"text": user_text.strip()},
+                        "content": {"text": merged_text},
                     }
                 ]
             }
@@ -114,9 +128,7 @@ def _extract_answer_from_sse_obj(obj: Dict[str, Any]) -> Optional[str]:
     if not isinstance(candidate, dict):
         return None
 
-    # 优先严格提取 answer，减少把中间检索信息当最终答案
-    ctype = str(candidate.get("type", "")).lower()
-    if ctype not in {"answer", "final_answer", "output_text"}:
+    if candidate.get("type") != "answer":
         return None
 
     text = _extract_text_from_any(candidate.get("content", {}))
@@ -163,7 +175,12 @@ def _normalize_answer_text(text: str) -> str:
     if not text:
         return ""
 
-    return text.replace("\r\n", "\n").replace("\r", "\n").strip()
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    # 仅压缩行内多空格，不破坏 Markdown 的换行结构
+    text = re.sub(r"[\t\f\v]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    return text.strip()
 
 
 def _build_headers() -> Dict[str, str]:
@@ -224,9 +241,6 @@ def call_coze_agent(user_text: str) -> Dict:
 
     final_answer_raw = "".join(answer_chunks).strip()
     final_answer = _normalize_answer_text(final_answer_raw)
-
-    if not final_answer:
-        raise HTTPException(status_code=502, detail="未解析到 agent 最终 answer，请检查 COZE_STREAM_RUN_URL/SESSION/PROJECT 配置")
 
     return {
         "ok": True,
